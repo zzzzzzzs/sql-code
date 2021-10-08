@@ -46,13 +46,17 @@ where pid in (
 SELECT pg_cancel_backend(pid);
 
 
--- TODO exists 和 in 的问题
+-- TODO exists , in 和 join 的问题
 -- exists 速度快，in 速度慢
 -- exists 子表中后面要加 where 条件 a.id = id
 -- 这个链接有解释 exists 是如何运行的。 https://bbs.csdn.net/topics/80519889
 select a.*
 from test2 a
 where exists(select * from test1 where a.id = id)
+
+-- 能用 exists 就用 exists，join 操作上更灵活，可以形成一张新表，然后在 where 后面进行查询
+-- TODO 什么时候用 join ?
+-- 使用join的时候可以将2个表的字段都用上。而 exists 和 in 只能使用最外面查询的字段。
 
 
 -- TODO case when 问题
