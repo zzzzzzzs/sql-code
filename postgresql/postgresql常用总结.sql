@@ -68,12 +68,14 @@ from ods.s_jst_sales_report
 ;
 
 SELECT t1.id
-     , case
-           when t2.is_view is null then 1
-    end as is_view
-     , case
-           when t2.is_edit is null then 1
-    end as is_edit
+     , CASE
+           WHEN t2.is_view IS NULL THEN 1
+           else t2.is_view
+    END AS is_view
+     , CASE
+           WHEN t2.is_edit IS NULL THEN 1
+           else t2.is_edit
+    END AS is_edit
      , t1.menu_name
      , t1.parent_id
      , t1.pre_parent_id
@@ -89,11 +91,12 @@ FROM dfsw_report_import_menu t1
          LEFT JOIN (
     SELECT *
     FROM dfsw_report_import_user_menu
-    WHERE user_id = '1388000316296925184'
+    WHERE user_id = '1356078255257554944'
 ) t2
                    ON t1.id = t2.menu_id
 WHERE t1.menu_status = 0
-  AND t1.level = 1;
+  AND t1.level = 1
+;
 
 
 
