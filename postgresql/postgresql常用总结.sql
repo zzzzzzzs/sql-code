@@ -65,6 +65,37 @@ select case
            when paid_amount is null then 0
            else paid_amount
 from ods.s_jst_sales_report
+;
+
+SELECT t1.id
+     , case
+           when t2.is_view is null then 1
+    end as is_view
+     , case
+           when t2.is_edit is null then 1
+    end as is_edit
+     , t1.menu_name
+     , t1.parent_id
+     , t1.pre_parent_id
+     , t1.level
+     , t1.link
+     , t1.menu_type
+     , t1.menu_status
+     , t1.menu_desc
+     , t1.tenant_id
+     , t1.create_time
+     , t1.update_time
+FROM dfsw_report_import_menu t1
+         LEFT JOIN (
+    SELECT *
+    FROM dfsw_report_import_user_menu
+    WHERE user_id = '1388000316296925184'
+) t2
+                   ON t1.id = t2.menu_id
+WHERE t1.menu_status = 0
+  AND t1.level = 1;
+
+
 
 -- TODO 更新操作
 update ods.s_jst_sales_report_status
@@ -196,3 +227,13 @@ FROM (
   FROM T
 )
 WHERE rowNum = 1
+
+
+---
+where pay_date 左右都要加范围，否则子查询会很慢
+
+
+
+--- union all 和 union
+union : 2个表中有相同的值，最后只会展示2个表中的1个
+union all : 最终会展示2个表的所有数据
