@@ -58,6 +58,8 @@ where exists(select * from test1 where a.id = id)
 -- TODO 什么时候用 join ?
 -- 使用join的时候可以将2个表的字段都用上。而 exists 和 in 只能使用最外面查询的字段。
 
+-- 如果in后面出来的是一张临时表，很有可能是该临时表没有建立索引导致的，
+-- 建议尽量避免使用in而改用join或者是exist.由于没有具体的sql放出，无法进行更实质性的优化。
 
 -- TODO case when 问题
 select case
@@ -240,3 +242,57 @@ where pay_date 左右都要加范围，否则子查询会很慢
 --- union all 和 union
 union : 2个表中有相同的值，最后只会展示2个表中的1个
 union all : 最终会展示2个表的所有数据
+
+--- TODO 求时间差
+select order_date::timestamp,date_part('day',order_date::timestamp-'2018-01-10 10:12:15'::timestamp)
+from t_jst_order_all
+
+
+
+-- TODO 如何将多张表的结果合并成一行，也就是一列数据和成一行
+select 'a' as name1;
+select 'b' as name2;
+select 'c' as name3;
+select 'd' as name4;
+
+-- 将多张表的结果转成列，要求每行带有一个别名，并且原来数据的名字改成一样的
+select * from (
+select 'a' as word, 'name1' as name
+union all
+select 'b' as word, 'name2' as name
+union all
+select 'c' as word, 'name3' as name
+union all
+select 'd' as word, 'name4' as name
+) t1;
+
+-- 将列转成行， 使用case when，此时的结果是每行都有数据，并且有地方是null
+select case when name='name1' then word end,
+       case when name='name2' then word end,
+       case when name='name3' then word end,
+       case when name='name4' then word end
+from (
+select 'a' as word, 'name1' as name
+union all
+select 'b' as word, 'name2' as name
+union all
+select 'c' as word, 'name3' as name
+union all
+select 'd' as word, 'name4' as name
+) t1;
+
+-- 使用max聚合函数将一列函数合在一起，选取合适的聚合函数就可以，例如sum
+select MAX(case when name='name1' then word end),
+       MAX(case when name='name2' then word end),
+       MAX(case when name='name3' then word end),
+       MAX(case when name='name4' then word end)
+from (
+select 'a' as word, 'name1' as name
+union all
+select 'b' as word, 'name2' as name
+union all
+select 'c' as word, 'name3' as name
+union all
+select 'd' as word, 'name4' as name
+) t1;
+
