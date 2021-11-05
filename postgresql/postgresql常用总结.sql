@@ -69,11 +69,11 @@ select case
 from ods.s_jst_sales_report
 ;
 
-SELECT t1.id
-     , CASE
+SELECT t1.id,
+       CASE
            WHEN t2.is_view IS NULL THEN 1
            else t2.is_view
-    END AS is_view
+        END AS is_view
      , CASE
            WHEN t2.is_edit IS NULL THEN 1
            else t2.is_edit
