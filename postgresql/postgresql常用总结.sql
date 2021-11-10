@@ -1,3 +1,13 @@
+-- TODO 查看支持连接数
+show max_connections;
+-- TODO 查询当前连接数
+select count(1) from pg_stat_activity;
+-- TODO 查询连接的详细数据
+select * from pg_stat_activity;
+-- TODO 杀掉idle进程
+select pg_terminate_backend(pid) from pg_stat_activity where state='idle';
+-- TODO 查看版本号
+select version();
 -- TODO postgresql查询某个表 pid，SQL、开始时间、执行SQL的ip地址
 -- 一般用这个
 SELECT distinct pg_stat_get_backend_pid(S.backendid)            AS pid,
