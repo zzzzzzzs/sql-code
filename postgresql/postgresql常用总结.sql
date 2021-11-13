@@ -1,3 +1,23 @@
+-- TODO 查看表的大小
+SELECT
+    table_name,
+    pg_size_pretty(table_size) AS table_size,
+    pg_size_pretty(indexes_size) AS indexes_size,
+    pg_size_pretty(total_size) AS total_size
+FROM (
+    SELECT
+        table_name,
+        pg_table_size(table_name) AS table_size,
+        pg_indexes_size(table_name) AS indexes_size,
+        pg_total_relation_size(table_name) AS total_size
+    FROM (
+        SELECT ('"' || table_schema || '"."' || table_name || '"') AS table_name
+        FROM information_schema.tables
+        where table_name ~ 't_wx_msg'
+    ) AS all_tables
+    ORDER BY total_size DESC
+) AS pretty_sizes;
+
 -- TODO 查看支持连接数
 show max_connections;
 -- TODO 查询当前连接数
