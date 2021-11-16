@@ -326,3 +326,14 @@ union all
 select 'd' as word, 'name4' as name
 ) t1;
 
+-- TODO 分页查询
+-- https://www.cnblogs.com/bbgasj/archive/2012/11/06/2756567.html?ivk_sa=1024320u
+SELECT *
+FROM (
+         SELECT ROW_NUMBER() OVER (ORDER BY id) AS RowNum, *
+         FROM ods.t_wx_msg
+         where send_time >= '2021-08-01 00:00:00'
+           and send_time <= '2021-08-30 23:59:59'
+     ) as t1
+where RowNum between (1 - 1) * 10 + 1 and 1 * 10
+order by RowNum
