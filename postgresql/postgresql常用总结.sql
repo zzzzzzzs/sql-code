@@ -135,7 +135,12 @@ WHERE t1.menu_status = 0
 -- TODO 更新操作
 update ods.s_jst_sales_report_status
 set merge_status = 1
-where report_day = '2021-09-01'
+where report_day = '2021-09-01';
+
+-- TODO 从一个表中的字段更新另一个字段
+update ods.u_tag_config t1
+set first_tag = (select tag from ods.u_tag_config t2 where t1.id = t2.id);
+
 
 -- TODO postgresql 解析json数组
 select o_id, json_array_elements(items::json) ->> 'amount'
@@ -337,3 +342,7 @@ FROM (
      ) as t1
 where RowNum between (1 - 1) * 10 + 1 and 1 * 10
 order by RowNum
+;
+
+-- TODO 匹配手机号
+SELECT txt FROM ods.t_wx_msg WHERE txt ~ '^[1][35678][0-9]{9}$';
