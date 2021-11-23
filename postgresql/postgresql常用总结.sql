@@ -248,6 +248,16 @@ INSERT INTO 表名
 VALUES (字段值，字段值，。。。),(字段值，字段值。。)
 ;[VALUES 需要将所有字段都补充上]
 
+-- TODO 从一个表中导入到另一个表中
+INSERT INTO ods.u_user_profile_main(id, tag, wxid, hit_count, batch_id, send_time_day) (
+    select id,
+           tag,
+           wxid,
+           hit_count,
+           to_char(now() AT TIME ZONE 'PRC', 'yyyy-MM-dd hh24:mi:ss') as batch_id,
+           send_time_day
+    from ods.u_user_profile
+)
 
 -- TODO 高效去重方案
 -- 保留首行的去重策略（Deduplicate Keep FirstRow）
