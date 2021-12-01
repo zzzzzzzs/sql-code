@@ -248,6 +248,9 @@ INSERT INTO 表名
 VALUES (字段值，字段值，。。。),(字段值，字段值。。)
 ;[VALUES 需要将所有字段都补充上]
 
+-- TODO insert 后带返回值
+insert into tb3(name) values('aa') returning id;
+
 -- TODO 从一个表中导入到另一个表中
 INSERT INTO ods.u_user_profile_main(id, tag, wxid, hit_count, batch_id, send_time_day) (
     select id,
