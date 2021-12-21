@@ -1,3 +1,11 @@
+-- TODO postgresql 官方文档
+http://www.postgres.cn/docs/9.4/performance-tips.html
+
+-- TODO Postgres 释放磁盘存储空间
+-- https://www.vicw.com/groups/code_monkey/topics/219
+VACUUM full table_name;
+
+
 -- TODO 查看表的大小
 SELECT
     table_name,
@@ -359,3 +367,14 @@ order by RowNum
 
 -- TODO 匹配手机号
 SELECT txt FROM ods.t_wx_msg WHERE txt ~ '^[1][35678][0-9]{9}$';
+
+
+-- TODO SQL查找是否"存在"
+SELECT 1 FROM table WHERE a = 1 AND b = 2 LIMIT 1
+#### Java写法:
+Integer exist = xxDao.existXxxxByXxx(params);
+if ( exist != NULL ) {
+  //当存在时，执行这里的代码
+} else {
+  //当不存在时，执行这里的代码
+}
