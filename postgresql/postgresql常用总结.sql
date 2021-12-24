@@ -295,7 +295,7 @@ where pay_date 左右都要加范围，否则子查询会很慢
 
 
 
---- union all 和 union
+--- TODO union all 和 union
 union : 2个表中有相同的值，最后只会展示2个表中的1个
 union all : 最终会展示2个表的所有数据
 
