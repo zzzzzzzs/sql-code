@@ -32,7 +32,7 @@ show max_connections;
 select count(1) from pg_stat_activity;
 -- TODO 查询连接的详细数据
 select * from pg_stat_activity;
--- TODO 杀掉idle进程
+-- TODO 杀掉idle连接用户
 select pg_terminate_backend(pid) from pg_stat_activity where state='idle';
 -- TODO 查看版本号
 select version();
