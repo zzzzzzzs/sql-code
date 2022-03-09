@@ -446,3 +446,11 @@ where send_time > '2021-03-03 00:00:00'
 group by stat_at
 order by stat_at
 limit 100;
+
+-- TODO 使用 json 列转行（分组后的数据在一个字段中）
+select label_type, array_to_string(array_agg(DISTINCT label), ', ') as label
+from mh_ocean_uem_userdetail
+where c_name = '益生菌1'
+  and data_type in (6, 8)
+group by label_type
+order by label;
