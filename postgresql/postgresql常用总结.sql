@@ -407,6 +407,7 @@ if
 
 -- TODO 时间转化
 select to_char(sysdate, 'yyyy-mm-dd hh24:mi:ss');
+select to_char('2021-01-01 00:00:00'::timestamp, 'yyyy-mm-dd hh24:mi:ss');
 //日期转化为字符串
 select to_char(sysdate, 'yyyy');
 //获取时间的年
@@ -454,3 +455,22 @@ where c_name = '益生菌1'
   and data_type in (6, 8)
 group by label_type
 order by label;
+
+-- TODO with 用法
+with t1 as
+         (
+             select wxid, employee_id
+             from dim.dim_vm_org
+         ),
+     t2 as (
+         select key, from_wxid, to_wxid
+         from dwd.fact_wx_msg_dtl
+     ),
+     t3 as (
+         select *
+         from t2
+                  left join t1 on t2.from_wxid = t1.wxid
+     )
+select wxid from t3
+;
+
