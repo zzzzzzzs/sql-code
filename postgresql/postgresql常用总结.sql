@@ -5,6 +5,9 @@ http://www.postgres.cn/docs/9.4/performance-tips.html
 -- https://www.vicw.com/groups/code_monkey/topics/219
 VACUUM full table_name;
 
+-- TODO 看库中所有表的信息，字段级别
+SELECT *
+FROM information_schema. COLUMNS
 
 -- TODO 查看表的大小
 SELECT table_name,
@@ -474,3 +477,15 @@ with t1 as
 select wxid from t3
 ;
 
+-- TODO 分区表
+CREATE TABLE t_wx_msg (
+"id" INT8,
+"app_id" INT4,
+"send_date_month" date
+)
+WITH (appendonly=true) DISTRIBUTED BY (id) PARTITION BY RANGE(send_date_month) (
+    PARTITION m2020 START('2020-01-01'::date) END ('2021-01-01'::date) EVERY('1 mon'::interval),
+    PARTITION m2021 START('2021-01-01'::date) END ('2022-01-01'::date) EVERY('1 mon'::interval),
+    PARTITION m2022 START('2022-01-01'::date) END ('2023-01-01'::date) EVERY('1 mon'::interval),
+    default PARTITION other
+);

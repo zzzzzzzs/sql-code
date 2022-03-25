@@ -1,7 +1,9 @@
 -- TODO 设置 hive 引擎
 set hive.execution.engine=mr;
 set hive.execution.engine=tez;
-set hive.execution.engine=spark;
+set hive.execution.engine=spark; hive on spark rdd
+
+select shop_name from dmp_order_ex_users_buytimes group by shop_name;
 
 -- TODO 本地跑 hivesql的时候最好设置上，否则内存不够
 set hive.auto.convert.join = false;
