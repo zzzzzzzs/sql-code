@@ -1,9 +1,12 @@
 -- TODO 设置 hive 引擎
 set hive.execution.engine=mr;
 set hive.execution.engine=tez;
-set hive.execution.engine=spark; hive on spark rdd
+set hive.execution.engine=spark;
+hive on spark rdd
 
-select shop_name from dmp_order_ex_users_buytimes group by shop_name;
+select shop_name
+from dmp_order_ex_users_buytimes
+group by shop_name;
 
 -- TODO 本地跑 hivesql的时候最好设置上，否则内存不够
 set hive.auto.convert.join = false;
@@ -16,7 +19,94 @@ set hive.auto.convert.join = false;
 SET hive.exec.mode.local.auto=true;
 
 -- TODO 查看某个函数的用法
-desc function extended substr;
+desc function extended nvl;
+
+-- TODO 拉链表
+DROP TABLE IF EXISTS ods_user_info;
+CREATE EXTERNAL TABLE ods_user_info
+(
+    `id`         STRING COMMENT '用户id',
+    `name`       STRING COMMENT '用户姓名',
+    `phone_num`  STRING COMMENT '手机号码',
+    `start_date` STRING COMMENT '开始日期',
+    `end_date`   STRING COMMENT '结束日期'
+) COMMENT '用户表'
+    PARTITIONED BY (`dt` STRING)
+    STORED AS PARQUET
+    LOCATION '/warehouse/gmall/ods/ods_user_info/'
+    TBLPROPERTIES ("parquet.compression" = "lzo");
+-- 首次进入到 ods 的数据，此次数据进入到 '2022-03-17' 分区，就是说数据进入到今天的分区
+insert overwrite table ods_user_info partition (dt = '2022-03-17')
+values ('1', 'zs', '111', '2022-03-17', '9999-99-99'),
+       ('2', 'ls', '222', '2022-03-17', '9999-99-99'),
+       ('3', 'ww', '333', '2022-03-17', '9999-99-99')
+;
+
+DROP TABLE IF EXISTS dim_user_info;
+CREATE EXTERNAL TABLE dim_user_info
+(
+    `id`         STRING COMMENT '用户id',
+    `name`       STRING COMMENT '用户姓名',
+    `phone_num`  STRING COMMENT '手机号码',
+    `start_date` STRING COMMENT '开始日期',
+    `end_date`   STRING COMMENT '结束日期'
+) COMMENT '用户表'
+    PARTITIONED BY (`dt` STRING)
+    STORED AS PARQUET
+    LOCATION '/warehouse/gmall/dim/dim_user_info/'
+    TBLPROPERTIES ("parquet.compression" = "lzo");
+
+-- 首次将 ods 层的数据导入到 dim 中的 '9999-99-99' 分区中
+insert overwrite table dim_user_info partition (dt = '9999-99-99')
+select id, name, phone_num, start_date, end_date
+from ods_user_info
+where dt = '2022-03-17';
+
+-- 往 ods 中生成新的数据，第2天了
+insert into ods_user_info partition (dt = '2022-03-18')
+values ('2', 'ls', '223', '2022-03-18', '9999-99-99'),
+       ('4', 'zl', '444', '2022-03-18', '9999-99-99');
+
+-- 开始拉链，做 2022-03-18 的拉链
+with t1 as (
+    -- 拿到 ods 中 2022-03-18 的数据
+    select id, name, phone_num, start_date, end_date from ods_user_info where dt = '2022-03-18'
+),
+     t2 as (
+         -- 将 dim 中最新的数据拿到
+         select id, name, phone_num, start_date, end_date, dt
+         from dim_user_info
+         where dt = '9999-99-99'
+     ),
+     t3 as (
+         -- 将 ods 中的数据与 dim 中 '9999-99-99' 分区中的数据进行比对，将 dim 中的数据修改
+         select t2.id,
+                t2.name,
+                t2.phone_num                     as phone_num,
+                t2.start_date,
+                nvl(t1.start_date, '9999-99-99') as end_date, -- 要修改的数据
+                nvl(t1.start_date, '9999-99-99') as dt -- 与更新后的 end_date 保持一致
+         from t2
+                  left join t1 on t1.id = t2.id and t1.name = t2.name
+     ),
+     t4 as (
+         select id, name, phone_num, start_date, end_date, dt
+         from t3
+         union all
+         select id, name, phone_num, start_date, end_date, '9999-99-99' -- 最新的数据
+         from t1
+     )
+insert
+overwrite
+table
+dim_user_info
+partition
+(
+dt
+)
+select id, name, phone_num, start_date, end_date, dt
+from t4
+;
 
 -- TODO 测试数据
 insert into business(name, orderdate, cost)
@@ -243,9 +333,11 @@ with t1 as (
     select brand, min(stt) as stt, max(edt) edt
     from discount_date_cross_problem
     group by brand
-), t2 as (
-    select brand,datediff(edt,stt) from t1
-)
+),
+     t2 as (
+         select brand, datediff(edt, stt)
+         from t1
+     )
 select *
 from t2
 ;

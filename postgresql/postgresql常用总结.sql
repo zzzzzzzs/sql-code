@@ -428,6 +428,8 @@ select to_char(sysdate, 'ss');
 -- TODO MD5 加密
 select MD5('加密');
 
+select md5(key) from dwd.fact_wx_msg_dtl where etl_date='2022-03-27';
+
 -- TODO 关键词模糊匹配
 select t1.txt, t2.tag
 from (
