@@ -1,13 +1,44 @@
 -- TODO postgresql 官方文档
-http://www.postgres.cn/docs/9.4/performance-tips.html
+-- http://www.postgres.cn/docs/9.4/performance-tips.html
+
+-- TODO 系统表
+-- http://postgres.cn/docs/9.4/catalogs.html
+-- https://gp-docs-cn.github.io/docs/ref_guide/system_catalogs/pg_stat_last_operation.html
 
 -- TODO Postgres 释放磁盘存储空间
 -- https://www.vicw.com/groups/code_monkey/topics/219
 VACUUM full table_name;
 
--- TODO 看库中所有表的信息，字段级别
+-- TODO 数据库可用信息
+-- http://postgres.cn/docs/9.4/catalog-pg-database.html
+select *
+from pg_database;
+
+-- TODO 查询注释
+SELECT tb.table_name, d.description
+FROM information_schema.tables tb
+         JOIN pg_class c ON c.relname = tb.table_name
+         LEFT JOIN pg_description d ON d.objoid = c.oid AND d.objsubid = '0'
+WHERE tb.table_schema = 'ods';
+
+-- TODO 根据select创建表
+create table dim.dim_fans
+as
+select *
+from ods.s01_dfsw_fans_info
+where etl_date = '2022-04-11'
+;
+
+-- TODO 正则按照，；：切分获取第一个
+select t1.a[1]
+from (
+         select id, regexp_split_to_array(data_name, '[，；：]\s*') as a from dam_meta_data
+     ) t1;
+
+-- TODO 元数据
+-- http://www.postgres.cn/docs/9.4/information-schema.html
 SELECT *
-FROM information_schema. COLUMNS
+FROM information_schema.COLUMNS;
 
 -- TODO 查看表的大小
 SELECT table_name,
@@ -156,9 +187,15 @@ update ods.s_jst_sales_report_status
 set merge_status = 1
 where report_day = '2021-09-01';
 
--- TODO 从一个表中的字段更新另一个字段
-update ods.u_tag_config t1
-set first_tag = (select tag from ods.u_tag_config t2 where t1.id = t2.id);
+-- TODO 从一个表中的字段更新另一个字段F
+update dam_meta_data t1
+set parent_id = t2.id
+from (
+         select id, context_path
+         from res
+     ) t2
+where t1.context_path = t2.context_path
+;
 
 
 -- TODO postgresql 解析json数组
@@ -246,6 +283,16 @@ from (select row_number() over (partition by v_date order by bonus desc) as top,
       from aaaa) a
 where a.top <= 2;
 
+select receiver_mobile, count(1)
+from t_jst_order_all
+where pay_date >= '2022-01-01 00:00:00'
+  and pay_date <= '2022-04-01 00:00:00'
+group by receiver_mobile
+-- having count(1) > 2
+order by count(1) desc
+limit 10
+;
+
 
 SELECT col1, col2, col3
 FROM (
@@ -268,7 +315,8 @@ INSERT INTO 表名
 VALUES (字段值，字段值，。。。),
        (字段值，字段值。。)
 ;
-[VALUES 需要将所有字段都补充上]
+[VALUES
+需要将所有字段都补充上]
 
 -- TODO insert 后带返回值
 insert into tb3(name)
@@ -428,7 +476,9 @@ select to_char(sysdate, 'ss');
 -- TODO MD5 加密
 select MD5('加密');
 
-select md5(key) from dwd.fact_wx_msg_dtl where etl_date='2022-03-27';
+select md5(key)
+from dwd.fact_wx_msg_dtl
+where etl_date = '2022-03-27';
 
 -- TODO 关键词模糊匹配
 select t1.txt, t2.tag
@@ -443,7 +493,7 @@ limit 100;
 
 -- TODO 按30分钟统计分组
 select to_timestamp(
-                -- 小于30分钟的按00统计，大于30分钟的按30统计
+           -- 小于30分钟的按00统计，大于30分钟的按30统计
                concat(to_char(send_time, 'yyyy-mm-dd HH24'), ':', FLOOR(date_part('minute', send_time) / 30) * 30),
                'yyyy-mm-dd HH24:MI') as stat_at,
        count(1)
@@ -476,16 +526,18 @@ with t1 as
          from t2
                   left join t1 on t2.from_wxid = t1.wxid
      )
-select wxid from t3
+select wxid
+from t3
 ;
 
 -- TODO 分区表
-CREATE TABLE t_wx_msg (
-"id" INT8,
-"app_id" INT4,
-"send_date_month" date
+CREATE TABLE t_wx_msg
+(
+    "id"              INT8,
+    "app_id"          INT4,
+    "send_date_month" date
 )
-WITH (appendonly=true) DISTRIBUTED BY (id) PARTITION BY RANGE(send_date_month) (
+    WITH (appendonly = true) DISTRIBUTED BY (id) PARTITION BY RANGE(send_date_month) (
     PARTITION m2020 START('2020-01-01'::date) END ('2021-01-01'::date) EVERY('1 mon'::interval),
     PARTITION m2021 START('2021-01-01'::date) END ('2022-01-01'::date) EVERY('1 mon'::interval),
     PARTITION m2022 START('2022-01-01'::date) END ('2023-01-01'::date) EVERY('1 mon'::interval),

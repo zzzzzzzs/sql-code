@@ -1,29 +1,162 @@
 -- TODO 设置 hive 引擎
-set hive.execution.engine=mr;
-set hive.execution.engine=tez;
-set hive.execution.engine=spark;
-hive on spark rdd
+set
+    hive.execution.engine=mr;
+set
+    hive.execution.engine=tez;
+set
+    hive.execution.engine=spark;
+hive
+on spark rdd
 
 select shop_name
 from dmp_order_ex_users_buytimes
 group by shop_name;
 
+-- TODO 手动打散 b
+SELECT a, SUM(cnt)
+FROM (
+    SELECT a, COUNT(DISTINCT b) as cnt
+    FROM T
+    GROUP BY a, MOD(HASH_CODE(b), 1024)
+)
+GROUP BY a;
+
+
 -- TODO 本地跑 hivesql的时候最好设置上，否则内存不够
-set hive.auto.convert.join = false;
-set hive.ignore.mapjoin.hint = false;
-set hive.exec.parallel = true;
-set hive.mapjoin.localtask.max.memory.usage=0.99;
-set hive.execution.engine = mr;
-set hive.auto.convert.join = false;
+set
+    hive.auto.convert.join = false;
+set
+    hive.ignore.mapjoin.hint = false;
+set
+    hive.exec.parallel = true;
+set
+    hive.mapjoin.localtask.max.memory.usage=0.99;
+set
+    hive.execution.engine = mr;
+set
+    hive.auto.convert.join = false;
 -- 在hive连接时开启智能本地模型
-SET hive.exec.mode.local.auto=true;
+SET
+    hive.exec.mode.local.auto=true;
 
 -- TODO 查看某个函数的用法
-desc function extended nvl;
+desc function extended explode;
+
+-- TODO 行转列
+-- 分组，然后要是去重用 collect_set，不去重就用 collect_list
+DROP TABLE IF EXISTS person_info;
+CREATE
+    EXTERNAL TABLE person_info
+(
+    `name`          STRING,
+    `constellation` STRING
+) COMMENT '用户表'
+    STORED AS PARQUET
+    LOCATION '/warehouse/gmall/ods/person_info/'
+    TBLPROPERTIES ("parquet.compression" = "lzo");
+
+insert overwrite table person_info
+values ('孙悟空', '白羊座'),
+       ('大海', '射手座'),
+       ('宋宋', '白羊座'),
+       ('猪八戒', '白羊座'),
+       ('凤姐', '射手座'),
+       ('苍老师', '白羊座');
+
+-- 将星座一样的人合并在一起
+select constellation, collect_list(name)
+from person_info
+group by constellation;
+-- 射手座,"[""凤姐"",""大海""]"
+-- 白羊座,"[""猪八戒"",""苍老师"",""孙悟空"",""宋宋""]"
+
+
+with t1 as (
+    select collect_list(name) as name
+    from person_info
+),
+     t2 as (
+         select *
+         from t1
+                  LATERAL VIEW explode(name) tmpTable as game1
+     )
+select *
+from t2;
+
+with t1 as (select concat(uid, ',', game_list) as datas from user_game),
+     t2 as (select bbb from t1 lateral view explode(split(datas, ',')) tmp as bbb)
+select *
+from t2;
+
+
+
+DROP TABLE IF EXISTS order_info;
+CREATE
+    EXTERNAL TABLE order_info
+(
+    `shop`   STRING,
+    `dt`     STRING,
+    `amount` STRING
+) COMMENT '订单表'
+    STORED AS PARQUET
+    LOCATION '/warehouse/gmall/ods/order_info/'
+    TBLPROPERTIES ("parquet.compression" = "lzo");
+
+insert overwrite table order_info
+values ('a', '2022-03-01', '10'),
+       ('b', '2022-03-01', '20'),
+       ('b', '2022-03-02', '20'),
+       ('c', '2022-03-03', '30'),
+       ('c', '2022-03-04', '40');
+
+with t1 as (select dt, `map`(shop, amount) as maps
+            from order_info),
+     t2 as (select collect_list(dt) as dts, collect_list(maps) as maps from t1),
+     t3 as (select `array`(dts, maps) from t2)
+--      t2 as (select `array`(shops, dts, amounts) as arr from t1),
+--      t3 as (select bbb from t2 lateral view explode(arr) tmp as bbb)
+select *
+from t3;
+
+
+select explode(struct(1, 2, 3, 3));
+
+select explode(map('A', 10, 'B', 20, 'C', 30));
+select struct('A', 10, 'B', 20, 'C', 30);
+
+
+-- TODO 列转行
+-- 一列的数据变成多行
+-- 可以将数据
+DROP TABLE IF EXISTS user_game;
+CREATE
+    EXTERNAL TABLE user_game
+(
+    `uid`       STRING,
+    `game_list` STRING
+) COMMENT '游戏表'
+    STORED AS PARQUET
+    LOCATION '/warehouse/gmall/ods/user_game/'
+    TBLPROPERTIES ("parquet.compression" = "lzo");
+insert
+    overwrite table user_game
+values ('a', '王者荣耀,刺激战场'),
+       ('b', '极品飞车,实况足球,天天飞车');
+
+select uid, game
+from user_game LATERAL VIEW explode(split(game_list, ",")) tmpTable as game;
+
+-- b,极品飞车
+-- b,实况足球
+-- b,天天飞车
+-- a,王者荣耀
+-- a,刺激战场
+
 
 -- TODO 拉链表
 DROP TABLE IF EXISTS ods_user_info;
-CREATE EXTERNAL TABLE ods_user_info
+CREATE
+    EXTERNAL TABLE ods_user_info
 (
     `id`         STRING COMMENT '用户id',
     `name`       STRING COMMENT '用户姓名',
@@ -36,14 +169,16 @@ CREATE EXTERNAL TABLE ods_user_info
     LOCATION '/warehouse/gmall/ods/ods_user_info/'
     TBLPROPERTIES ("parquet.compression" = "lzo");
 -- 首次进入到 ods 的数据，此次数据进入到 '2022-03-17' 分区，就是说数据进入到今天的分区
-insert overwrite table ods_user_info partition (dt = '2022-03-17')
+insert
+    overwrite table ods_user_info partition (dt = '2022-03-17')
 values ('1', 'zs', '111', '2022-03-17', '9999-99-99'),
        ('2', 'ls', '222', '2022-03-17', '9999-99-99'),
        ('3', 'ww', '333', '2022-03-17', '9999-99-99')
 ;
 
 DROP TABLE IF EXISTS dim_user_info;
-CREATE EXTERNAL TABLE dim_user_info
+CREATE
+    EXTERNAL TABLE dim_user_info
 (
     `id`         STRING COMMENT '用户id',
     `name`       STRING COMMENT '用户姓名',
@@ -57,7 +192,8 @@ CREATE EXTERNAL TABLE dim_user_info
     TBLPROPERTIES ("parquet.compression" = "lzo");
 
 -- 首次将 ods 层的数据导入到 dim 中的 '9999-99-99' 分区中
-insert overwrite table dim_user_info partition (dt = '9999-99-99')
+insert
+    overwrite table dim_user_info partition (dt = '9999-99-99')
 select id, name, phone_num, start_date, end_date
 from ods_user_info
 where dt = '2022-03-17';
@@ -85,7 +221,7 @@ with t1 as (
                 t2.phone_num                     as phone_num,
                 t2.start_date,
                 nvl(t1.start_date, '9999-99-99') as end_date, -- 要修改的数据
-                nvl(t1.start_date, '9999-99-99') as dt -- 与更新后的 end_date 保持一致
+                nvl(t1.start_date, '9999-99-99') as dt        -- 与更新后的 end_date 保持一致
          from t2
                   left join t1 on t1.id = t2.id and t1.name = t2.name
      ),
@@ -134,16 +270,11 @@ FROM business; -- 不能再窗口外面排序，这样的结果是乱的
 
 SELECT NAME,
        orderdate,
-       cost,                                                                                     -- 购买明细
-       SUM(cost) over (ORDER BY orderdate)                                            sum_cost,  -- 按照日期累加
-       SUM(cost)
-           over (ORDER BY orderdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_cost1, -- 从一开始到当前行累加 和 sum_cost一样
-       SUM(cost) over (ORDER BY orderdate ROWS BETWEEN 1 PRECEDING AND CURRENT ROW )  sum_cost2, -- 上一行与当前行的累加
-       SUM(cost) over (ORDER BY orderdate ROWS BETWEEN CURRENT ROW AND 1 FOLLOWING)   sum_cost3, -- 当前行与下一行的累加
-       SUM(cost)
-           over (ORDER BY orderdate ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING )        sum_cost4, -- 上一行 与 当前行 与 下一行的累加
-       sum(cost)
-           over (order by orderdate ROWS BETWEEN UNBOUNDED PRECEDING and 1 PRECEDING) sum_cost5  -- 从一开始到上一行累加，也就是说第一个为null
+       cost,                                                                              -- 购买明细
+       SUM(cost) over (ORDER BY orderdate) sum_cost,                                      -- 按照日期累加 SUM(cost)
+    over (ORDER BY orderdate ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) sum_cost1, -- 从一开始到当前行累加 和 sum_cost一样 SUM(cost) over (ORDER BY orderdate ROWS BETWEEN 1 PRECEDING AND CURRENT ROW )  sum_cost2, -- 上一行与当前行的累加 SUM(cost) over (ORDER BY orderdate ROWS BETWEEN CURRENT ROW AND 1 FOLLOWING)   sum_cost3, -- 当前行与下一行的累加 SUM(cost)
+    over (ORDER BY orderdate ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING ) sum_cost4,        -- 上一行 与 当前行 与 下一行的累加 sum(cost)
+    over (order by orderdate ROWS BETWEEN UNBOUNDED PRECEDING and 1 PRECEDING) sum_cost5 -- 从一开始到上一行累加，也就是说第一个为null
 FROM business;
 
 -- TODO 连续问题
@@ -341,7 +472,8 @@ with t1 as (
 select *
 from t2
 ;
-set hive.execution.engine=spark;
+set
+    hive.execution.engine=spark;
 
 select brand,
        if(maxEdt is null, stt, if(stt > maxEdt, stt, date_add(maxEdt, 1))) stt,
@@ -374,7 +506,8 @@ group by brand;
 -- TODO 同时在线问题
 -- 如下为某直播平台主播开播及关播时间，根据该数据计算出平台最高峰同时在线的主播人数。
 
-set hive.execution.engine=spark;
+set
+    hive.execution.engine=spark;
 
 insert into simu_online_problem(id, stt, edt)
 values (1001, '2021-06-14 12:12:12', '2021-06-14 18:12:12'),
